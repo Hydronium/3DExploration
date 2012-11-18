@@ -23,39 +23,11 @@ unsigned int errort;
 GLuint myProgram;
 GLuint positionBufferObject;
 
-//float vertexPositions[6600];
+float vertexPositions[6600];
 
 float screen_width = 0.0, screen_height = 0.0;
 
 /*
-const float vertexPositionsold[] = {
-	*
-      0.50f,      0.50f, //     0.00f,      1.00f,
-      -0.50f,     -0.50f,//     0.00f,      1.00f,
-      -0.50f,     0.50f, //     0.00f,      1.00f,
-
-      0.50f,      0.50f, //     0.00f,      1.00f,
-      -0.50,      -0.50f,//     0.00f,      1.00f,
-      0.50f,      -0.50f,//     0.00f,      1.00f,
-	
-
-      -0.8f,      -0.8f, 
-      -1.0f,       -1.0f,
-      -1.0f,       -0.8f,
-
-      -0.8f,      -0.8f,
-      -1.0f,       -1.0f,
-      -0.8f,      -1.0f,
-
-      1.00f,      1.00f,
-      0.00f,      0.00f,
-      0.00f,      1.00f,
-
-      0.00f,      1.00f,
-      0.00f,      0.00f,
-      1.00f,      0.00f,
-};
-*/
 const float vertexPositions[] = {
       -1.0f, -0.8f, //0
       -1.0f, -1.0f, //1
@@ -123,7 +95,7 @@ const float vertexPositions[] = {
 
        0.0f,  1.0f, //10
        0.0f,  0.0f, //11
-/*
+****
       -1.0f, -0.8f, //0
       -0.8f, -0.8f, //1
       -0.6f, -0.8f, //2
@@ -151,9 +123,9 @@ const float vertexPositions[] = {
       1.00f, 0.00f,
       0.00f, 0.00f,
       1.00f, 0.00f,
-*/
-};
 
+};
+*/
 const GLubyte indices[] = {
       0, 1, 2, 
       3, 2, 1,
@@ -203,12 +175,10 @@ short int Get2Bytes(FILE * ptr);
 
 int blah(void);
 /*--------------------------------------------------*/
-/*
-int blah(void)
-{//////////TO FIX
-      int count = 0, texture_start;
 
-      
+int blah(void)
+{
+      int count = 0, texture_start;
 
       for (int y = 0; y < 20; y++)
       {
@@ -248,11 +218,9 @@ int blah(void)
                   vertexPositions[count++] = 0.0f;
       }
 
-      count++;
-      texture_start = count;
       return 0;
 }
-*/
+
 short int Get2Bytes(FILE * ptr)
 {
       short int val = 0;
@@ -280,7 +248,6 @@ int GetBitmap(void)
 {
       char        * bmBuffer, * pxPtr;
       FILE        * bmFile;
-      //FILE * result;
       GLuint      texture;
 
       int         bmSize, 
@@ -303,7 +270,7 @@ int GetBitmap(void)
 
       short int   bmClrPlane, bmBPP;
       char        bmChar0, bmChar1;
-      //char msgData[100];
+
 
       bmFile = fopen("multisquare.bmp", "rb");
       if (bmFile == NULL)
@@ -323,10 +290,6 @@ int GetBitmap(void)
       
       bmSize = Get4Bytes(bmFile);
 
-      //Allocate dynamic memory of size 'bmSize'.
-      //
-      //
-      
       //Skip 4 bytes. These bytes are application specific,
       //and generally unused.
       if (fseek(bmFile, 4, SEEK_CUR) != 0)
@@ -399,16 +362,6 @@ int GetBitmap(void)
             {
                   for (int A = 0; A <= bmHeightPx; A++)
                   {
-                        /*
-                        for (int B = 0; B <= bmWidthPx; B++)
-                        {
-                              
-                              *(pxPtr + 2) = fgetc(bmFile);
-                              *(pxPtr + 1) = fgetc(bmFile);
-                              *pxPtr       = fgetc(bmFile);
-                              
-                        }
-                        */
                         fread(pxPtr, 1, pixelBytesPerRow, bmFile);
                         pxPtr += totalBytesPerRow;
                   }
@@ -421,16 +374,6 @@ int GetBitmap(void)
             {
                   for (int A = 0; A <= bmHeightPx; A++)
                   {
-                        /*
-                        for (int B = 0; B <= bmWidthPx; B++)
-                        {
-                              
-                              *(pxPtr + 2) = fgetc(bmFile);
-                              *(pxPtr + 1) = fgetc(bmFile);
-                              *pxPtr       = fgetc(bmFile);
-                              
-                        }
-                        */
                         fread(pxPtr, 1, pixelBytesPerRow, bmFile);
 
                         if (fseek(bmFile, padCount, SEEK_CUR) != 0)
@@ -448,9 +391,7 @@ int GetBitmap(void)
             //Shouldn't get here
             break;
       }
-      //result = fopen("test.txt","w");
-      //fwrite(bmBuffer, 1, dataSize , result);
-      //fclose(result);
+
       fclose(bmFile);
 
       glActiveTexture(GL_TEXTURE0);
@@ -532,7 +473,6 @@ GLuint CreateProgram(GLvoid)
       FILE * vSh;
       FILE * fSh;
       int desc;
-      //int eofresult;
 
       GLint status;
       GLint logLength;
@@ -559,9 +499,6 @@ GLuint CreateProgram(GLvoid)
       }
 
       rcount1 = fread(dataBuffer, 1, fLen, vSh);   
-
-      //*(dataBuffer + rcount1 + 1) = '\0';
-      //eofresult = feof(vSh);
       
       if(feof(vSh) == 0)
       {
@@ -591,7 +528,6 @@ GLuint CreateProgram(GLvoid)
 
       fLen = fileStat.st_size;
       dataBuffer = (char *) calloc((fLen + 1), sizeof(char));
-      //dataBuffer = realloc(dataBuffer, (fLen * sizeof(char)) + sizeof(char));
 
       if (dataBuffer == NULL)
       {
@@ -600,8 +536,6 @@ GLuint CreateProgram(GLvoid)
       }
 
       rcount2 = fread(dataBuffer, 1, fLen, fSh);
-
-      //*(dataBuffer + rcount2 + 1) = '\0';
 
       if(feof(fSh) == 0)
       {
@@ -644,8 +578,6 @@ GLuint CreateProgram(GLvoid)
  
 GLvoid ResizeGLScene(GLsizei width, GLsizei height)
 {
-      //char msgData[100];
-
       if (height == 0)
       {
             height = 1;
@@ -654,14 +586,6 @@ GLvoid ResizeGLScene(GLsizei width, GLsizei height)
       glViewport(0, 0, width, height);
       screen_width = width;
       screen_height = height;
-
-      //glMatrixMode(GL_PROJECTION);
-      //glLoadIdentity(); DEPRECATED
-      
-      //gluPerspective(45.0f, (GLfloat) width / (GLfloat) height, 0.1f, 100.0f);
-      
-      //glMatrixMode(GL_MODELVIEW); DEPRECATED
-      //glLoadIdentity(); DEPRECATED
 }
  
 GLvoid InitGL(GLvoid)
@@ -672,12 +596,12 @@ GLvoid InitGL(GLvoid)
 
       //char * glVer = (char *)glGetString(GL_VERSION);
       //char * glSLV = (char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
-      //glShadeModel(GL_SMOOTH); DEPRECATED
+
       glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
       glClearDepth(1.0f);
       glEnable(GL_DEPTH_TEST);
       glDepthFunc(GL_LEQUAL);
-      //glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); DEPRECATED
+
       glGenBuffers(1, &positionBufferObject);
       //errort = glGetError();
 
@@ -690,12 +614,10 @@ GLvoid InitGL(GLvoid)
  
       myProgram = CreateProgram();
  
-      //return TRUE; CURRENTLY UNNECESSARY
 }
  
 int DrawGLScene(GLvoid)
 {
-      //char msgData[100];
       //float uniforms[2];
       int textureLocation;
 
@@ -728,8 +650,6 @@ int DrawGLScene(GLvoid)
       glDisableVertexAttribArray(1);
       glUseProgram(0);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
- 
-      //glLoadIdentity(); DEPRECATED
  
       return TRUE;
 }
@@ -832,8 +752,8 @@ bool CreateGLWindow(char* title, int width, int height, int bits, bool fullscree
                   dw = GetLastError();
             }
 
-            dmScreenSettings.dmPelsWidth = width; //enable this in real
-            dmScreenSettings.dmPelsHeight = height; //enable this in real
+            dmScreenSettings.dmPelsWidth = width;
+            dmScreenSettings.dmPelsHeight = height;
 
             changeresult = ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN);
 
@@ -960,17 +880,6 @@ bool CreateGLWindow(char* title, int width, int height, int bits, bool fullscree
 
       //char * glVer = (char *)glGetString(GL_VERSION);
       //char * glSLV = (char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
-
-      //MessageBox(NULL, glVer, glVer, MB_OK);
-
-      
-      /*if (!InitGL)
-      {
-            KillGLWindow();
-            MessageBox(NULL, "Initialization failed", "Error", MB_OK | MB_ICONEXCLAMATION);
-
-            return FALSE;
-      }*/ //CURRENTLY UNNECESSARY
 
       return TRUE;
 }
@@ -1099,5 +1008,3 @@ int WINAPI WinMain(     HINSTANCE hInstance,
       KillGLWindow();
       return (msg.wParam);
 }
-
-
