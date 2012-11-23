@@ -304,6 +304,11 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
       nullTester = glUseProgram                       = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
       nullTester = glVertexAttribPointer              = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
       
+      if (nullTester == NULL)
+      {
+            return FALSE;
+      }
+
       nullTester = glBindTexture                      = (PFNGLBINDTEXTUREPROC)GetProcAddress(hGLLIB, "glBindTexture");
       nullTester = glClear                            = (PFNGLCLEARPROC)GetProcAddress(hGLLIB, "glClear");
       nullTester = glClearColor                       = (PFNGLCLEARCOLORPROC)GetProcAddress(hGLLIB, "glClearColor");
