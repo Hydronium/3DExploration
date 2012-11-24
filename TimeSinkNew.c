@@ -18,7 +18,13 @@ ATOM resultRegisterClass;
 
 int width, height;
 
-bool fullscreen = FALSE;
+bool FULLSCREEN = FALSE;
+bool INFOCUS = TRUE;
+
+HANDLE eventResTimer;
+HANDLE hResTimer = NULL;
+HANDLE hTimerQueue = NULL;
+short int unconsumedEvents = 0;
 /*----------------------------------------------------*/
 /*Function declarations*/
 /*----------------------------------------------------*/
@@ -33,6 +39,9 @@ LRESULT CALLBACK WndProc(     HWND hWnd,
                               LPARAM lParam);
 
 bool GLSetup(HWND hWnd, LPARAM lParam);
+
+VOID CALLBACK cbResTimer(     PVOID lpParam,          //Optional data from CreateTimerQueueTimer
+                              BOOLEAN hasFired);      //True for timers, false for wait events
 
 /*----------------------------------------------------*/
 /*Functions*/
@@ -55,6 +64,8 @@ int WINAPI WinMain(     HINSTANCE hInstance,
       width = 640;
       height = 480;
 
+      DWORD resultWaitResTimer = 0;
+
       wc.cbSize        = sizeof(WNDCLASSEX);
       wc.style         = CS_HREDRAW |CS_VREDRAW | CS_OWNDC;
       wc.lpfnWndProc   = WndProc;
@@ -75,7 +86,7 @@ int WINAPI WinMain(     HINSTANCE hInstance,
       }
 
       //Do we want fullscreen?
-      if (fullscreen)
+      if (FULLSCREEN)
       {
             DISPLAY_DEVICE dispDevice;
             DEVMODE dmScreenSettings;
@@ -109,7 +120,7 @@ int WINAPI WinMain(     HINSTANCE hInstance,
             {
                   if (MessageBox(NULL, "Use window mode?", "GL", MB_YESNO | MB_ICONEXCLAMATION) == IDYES)
                   {
-                        fullscreen = FALSE;
+                        FULLSCREEN = FALSE;
                   }
                   else
                   {
@@ -171,6 +182,17 @@ int WINAPI WinMain(     HINSTANCE hInstance,
                         DispatchMessage(&Msg);
                   }
             }
+
+            resultWaitResTimer = WaitForSingleObject(eventResTimer, 17);
+            if (resultWaitResTimer == WAIT_FAILED)
+            {
+                  GetLastError();
+                  return -1;
+            }
+            else if (resultWaitResTimer == WAIT_OBJECT_0)
+            {
+                  unconsumedEvents--;
+            }
       }
 
       return Msg.wParam;
@@ -183,6 +205,18 @@ LRESULT CALLBACK WndProc(     HWND hWnd,
 {
       switch(uMSG)
       {
+            case WM_ACTIVATE:
+            {
+                  if (LOWORD(wParam))
+                  {
+                        INFOCUS = TRUE;
+                  }
+                  else
+                  {
+                        INFOCUS = FALSE;
+                  }
+                  break;
+            }
             case WM_CREATE:
             {
                   if (!(GLSetup(hWnd, lParam)))
@@ -193,6 +227,11 @@ LRESULT CALLBACK WndProc(     HWND hWnd,
             }
             case WM_CLOSE:
             {
+                  CloseHandle(eventResTimer);
+                  if (!DeleteTimerQueue(hTimerQueue))
+                  {
+                        GetLastError();
+                  }
                   DestroyWindow(hWnd);
                   break;
             }
@@ -272,61 +311,84 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
             return FALSE;
       }
 
-      void * nullTester = NULL;
       HINSTANCE hGLLIB = NULL;
       hGLLIB = LoadLibrary("opengl32.dll");
 
-      if (hGLLIB == NULL)
+      if(GetLastError())
       {
             return FALSE;
       }
 
-      nullTester = glActiveTexture                    = (PFNGLACTIVETEXTUREPROC)wglGetProcAddress("glActiveTexture");
-      nullTester = glAttachShader                     = (PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader");
-      nullTester = glBindBuffer                       = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
-      nullTester = glBufferData                       = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
-      nullTester = glCompileShader                    = (PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader");
-      nullTester = glCreateProgram                    = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
-      nullTester = glCreateShader                     = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
-      nullTester = glDeleteShader                     = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
-      nullTester = glDetachShader                     = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
-      nullTester = glDisableVertexAttribArray         = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glDisableVertexAttribArray");
-      nullTester = glEnableVertexAttribArray          = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
-      nullTester = glGenBuffers                       = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
-      nullTester = glGetShaderInfoLog                 = (PFNGLGETSHADERINFOLOGPROC)wglGetProcAddress("glGetShaderInfoLog");
-      nullTester = glGetShaderiv                      = (PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv");
-      nullTester = glGetUniformfv                     = (PFNGLGETUNIFORMFVPROC)wglGetProcAddress("glGetUniformfv");
-      nullTester = glGetUniformLocation               = (PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation");
-      nullTester = glLinkProgram                      = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
-      nullTester = glShaderSource                     = (PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource");
-      nullTester = glUniform1i                        = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
-      nullTester = glUniform2f                        = (PFNGLUNIFORM2FPROC)wglGetProcAddress("glUniform2f");
-      nullTester = glUseProgram                       = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
-      nullTester = glVertexAttribPointer              = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
+      glActiveTexture                    = (PFNGLACTIVETEXTUREPROC)wglGetProcAddress("glActiveTexture");
+      glAttachShader                     = (PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader");
+      glBindBuffer                       = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
+      glBufferData                       = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
+      glCompileShader                    = (PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader");
+      glCreateProgram                    = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
+      glCreateShader                     = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
+      glDeleteShader                     = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
+      glDetachShader                     = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
+      glDisableVertexAttribArray         = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glDisableVertexAttribArray");
+      glEnableVertexAttribArray          = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
+      glGenBuffers                       = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
+      glGetShaderInfoLog                 = (PFNGLGETSHADERINFOLOGPROC)wglGetProcAddress("glGetShaderInfoLog");
+      glGetShaderiv                      = (PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv");
+      glGetUniformfv                     = (PFNGLGETUNIFORMFVPROC)wglGetProcAddress("glGetUniformfv");
+      glGetUniformLocation               = (PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation");
+      glLinkProgram                      = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
+      glShaderSource                     = (PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource");
+      glUniform1i                        = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
+      glUniform2f                        = (PFNGLUNIFORM2FPROC)wglGetProcAddress("glUniform2f");
+      glUseProgram                       = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
+      glVertexAttribPointer              = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
       
-      if (nullTester == NULL)
+      glBindTexture                      = (PFNGLBINDTEXTUREPROC)GetProcAddress(hGLLIB, "glBindTexture");
+      glClear                            = (PFNGLCLEARPROC)GetProcAddress(hGLLIB, "glClear");
+      glClearColor                       = (PFNGLCLEARCOLORPROC)GetProcAddress(hGLLIB, "glClearColor");
+      glClearDepth                       = (PFNGLCLEARDEPTHPROC)GetProcAddress(hGLLIB, "glClearDepth");
+      glDepthFunc                        = (PFNGLDEPTHFUNCPROC)GetProcAddress(hGLLIB, "glDepthFunc");
+      glDrawArrays                       = (PFNGLDRAWARRAYSPROC)GetProcAddress(hGLLIB, "glDrawArrays");
+      glEnable                           = (PFNGLENABLEPROC)GetProcAddress(hGLLIB, "glEnable");
+      glGenTextures                      = (PFNGLGENTEXTURESPROC)GetProcAddress(hGLLIB, "glGenTextures");
+      glTexImage2D                       = (PFNGLTEXIMAGE2DPROC)GetProcAddress(hGLLIB, "glTexImage2D");
+      glTexParameteri                    = (PFNGLTEXPARAMETERIPROC)GetProcAddress(hGLLIB, "glTexParameteri");
+      glViewport                         = (PFNGLVIEWPORTPROC)GetProcAddress(hGLLIB, "glViewport");
+      glDrawElements                     = (PFNGLDRAWELEMENTSPROC)GetProcAddress(hGLLIB, "glDrawElements");
+      glGetError                         = (PFNGLGETERRORPROC)GetProcAddress(hGLLIB, "glGetError");
+      glGetString                        = (PFNGLGETSTRINGPROC)GetProcAddress(hGLLIB, "glGetString");
+
+      if(GetLastError())
       {
             return FALSE;
       }
 
-      nullTester = glBindTexture                      = (PFNGLBINDTEXTUREPROC)GetProcAddress(hGLLIB, "glBindTexture");
-      nullTester = glClear                            = (PFNGLCLEARPROC)GetProcAddress(hGLLIB, "glClear");
-      nullTester = glClearColor                       = (PFNGLCLEARCOLORPROC)GetProcAddress(hGLLIB, "glClearColor");
-      nullTester = glClearDepth                       = (PFNGLCLEARDEPTHPROC)GetProcAddress(hGLLIB, "glClearDepth");
-      nullTester = glDepthFunc                        = (PFNGLDEPTHFUNCPROC)GetProcAddress(hGLLIB, "glDepthFunc");
-      nullTester = glDrawArrays                       = (PFNGLDRAWARRAYSPROC)GetProcAddress(hGLLIB, "glDrawArrays");
-      nullTester = glEnable                           = (PFNGLENABLEPROC)GetProcAddress(hGLLIB, "glEnable");
-      nullTester = glGenTextures                      = (PFNGLGENTEXTURESPROC)GetProcAddress(hGLLIB, "glGenTextures");
-      nullTester = glTexImage2D                       = (PFNGLTEXIMAGE2DPROC)GetProcAddress(hGLLIB, "glTexImage2D");
-      nullTester = glTexParameteri                    = (PFNGLTEXPARAMETERIPROC)GetProcAddress(hGLLIB, "glTexParameteri");
-      nullTester = glViewport                         = (PFNGLVIEWPORTPROC)GetProcAddress(hGLLIB, "glViewport");
-      nullTester = glDrawElements                     = (PFNGLDRAWELEMENTSPROC)GetProcAddress(hGLLIB, "glDrawElements");
-      nullTester = glGetError                         = (PFNGLGETERRORPROC)GetProcAddress(hGLLIB, "glGetError");
-      nullTester = glGetString                        = (PFNGLGETSTRINGPROC)GetProcAddress(hGLLIB, "glGetString");
+      eventResTimer = CreateEvent(  NULL,       //No SECURITY_ATTRIBUTES struct
+                                    FALSE,      //Auto-reset
+                                    FALSE,      //Initially off
+                                    NULL);      //No name
 
-      if (nullTester == NULL)
+      if(GetLastError())
       {
             return FALSE;
+      }
+
+      hTimerQueue = CreateTimerQueue();
+
+      if(GetLastError())
+      {
+            return FALSE;
+      }
+
+      if (!CreateTimerQueueTimer(   &hResTimer,                         //Address of timer handle
+                                    hTimerQueue,                        //Which queue to put it in
+                                    (WAITORTIMERCALLBACK)cbResTimer,    //What callback function to use
+                                    NULL,                               //No optional parameter
+                                    20,                                 //20Ms till first fire
+                                    8,                                  //8Ms period between fires
+                                    WT_EXECUTEINTIMERTHREAD))           //Execute in this thread
+      {
+        GetLastError();
+        return FALSE;
       }
 
       ShowWindow(hWnd, globCmdShow);
@@ -334,4 +396,14 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
       UpdateWindow(hWnd);
 
       return TRUE;
+}
+
+VOID CALLBACK cbResTimer(     PVOID lpParam,
+                              BOOLEAN hasFired)
+{
+      if (hasFired)
+      {
+            SetEvent(eventResTimer);
+            unconsumedEvents++;
+      }
 }
