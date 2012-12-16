@@ -30,6 +30,15 @@ short int unconsumedEvents = 0;
 GLenum enumGLError;
 
 GLuint myProgram;
+
+GLuint vPosBufferObject;
+
+const float vPos[] =
+{
+      -0.1f,  1.0f,
+      -1.0f, -0.5f,
+       0.0f,  1.0f,
+};
 /*----------------------------------------------------*/
 /*Function declarations*/
 /*----------------------------------------------------*/
@@ -101,7 +110,7 @@ int WINAPI WinMain(     HINSTANCE hInstance,
             return 1;
       }
 
-      //Do we want fullscreen?
+      //Do we want fullscreen? Not needed currently but keeping it so I don't forget.
       if (FULLSCREEN)
       {
             DISPLAY_DEVICE dispDevice;
@@ -653,6 +662,17 @@ int GetBitmap(void)
 bool Render(void)
 {
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+      glUseProgram(myProgram);
+      glBindBuffer(GL_ARRAY_BUFFER, vPosBufferObject);
+      glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+     
+      glEnableVertexAttribArray(0);
+      glDrawArrays(GL_TRIANGLES, 0, 6);
+
+      glDisableVertexAttribArray(0);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+      glUseProgram(0);
       return TRUE;
 }
 
@@ -779,15 +799,14 @@ void InitGLSettings(void)
       glEnable(GL_DEPTH_TEST);
       glDepthFunc(GL_LEQUAL);
 
-/*      glGenBuffers(1, &positionBufferObject);
+      glGenBuffers(1, &vPosBufferObject);
 
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, positionBufferObject);
+      glBindBuffer(GL_ARRAY_BUFFER, vPosBufferObject);
 
-      glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(vertexPositions), (const float *)vertexPositions, GL_STATIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(vPos), vPos, GL_STATIC_DRAW);
 
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);*/
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
 
- 
       myProgram = CreateProgram();
 }
 
