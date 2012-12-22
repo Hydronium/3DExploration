@@ -33,11 +33,63 @@ GLuint myProgram;
 
 GLuint vPosBufferObject;
 
+float PersMatrix[16] = { 0 };
+
+float pNear = 1.0f;
+float pFar = 100.0f;
+float w_right = 10.0;  float w_left = -10.0;
+float h_top = 10.0;    float h_bottom = -10.0;
+
 const float vPos[] =
 {
-      -0.1f,  1.0f,
-      -1.0f, -0.5f,
-       0.0f,  1.0f,
+/*      //Triangle 1 position
+       0.00f,  1.00f,  0.00f,
+      -0.70f,  0.00f,  0.66f,
+       0.70f,  0.00f,  0.66f,
+
+      //Triangle 2 position
+       0.00f,  1.00f,  0.00f,
+      -0.70f,  0.00f,  0.66f,
+       0.00f,  0.00f,  0.00f,
+
+      //Triangle 3 position
+       0.00f,  1.00f,  0.00f,
+       0.00f,  0.00f,  0.00f,
+       0.70f,  0.00f,  0.66f,*/
+
+      //1
+      00.0f, 05.0f, -2.00f,
+      00.0f, -10.0f, -2.00f,
+      05.0f, 05.0f, -2.00f,
+
+            //2
+      1.0f, 2.0f, -1.01f,
+      3.0f, 4.0f, -1.01f,
+      1.0f, 6.0f, -1.01f,
+
+            //3
+      -100.00f, -100.00f, -5.0f,
+       100.00f, -100.00f, -5.0f,
+       100.00f,  100.00f, -15.0f,
+
+      //Triangle 1 colour
+      0.50, 0.50, 0.50,
+      0.50, 0.50, 0.50,
+      0.50, 0.50, 0.50,
+
+      //Triangle 2 colour
+      0.70, 0.50, 0.20,
+      0.70, 0.50, 0.20,
+      0.70, 0.50, 0.20,
+
+      //Triangle 3 colour
+      0.70, 0.90, 0.60,
+      0.70, 0.90, 0.60,
+      0.70, 0.90, 0.60,
+
+
+
+
 };
 /*----------------------------------------------------*/
 /*Function declarations*/
@@ -57,7 +109,7 @@ bool GLSetup(HWND hWnd, LPARAM lParam);
 VOID CALLBACK cbResTimer(     PVOID lpParam,          //Optional data from CreateTimerQueueTimer
                               BOOLEAN hasFired);      //True for timers, false for wait events
 
-int GetBitmap(void); //At the moment this works as intended. Future: overlay a struct on the memory.
+int Load_Bitmap(void); //At the moment this works as intended. Future: overlay a struct on the memory.
 int Get4Bytes(FILE * ptr);
 short int Get2Bytes(FILE * ptr);
 
@@ -68,6 +120,8 @@ int CreateProgram(void);
 void InitGLSettings(void);
 
 void ResizeViewport(int width, int height);
+
+int LoadIQM(void);
 /*----------------------------------------------------*/
 /*Functions*/
 /*----------------------------------------------------*/
@@ -273,7 +327,7 @@ LRESULT CALLBACK WndProc(     HWND hWnd,
             }
             case WM_SIZE:
             {
-
+                  ResizeViewport(LOWORD(lParam), HIWORD(lParam));
             }
             default:
             {
@@ -377,6 +431,7 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
       glUniform2f                        = (PFNGLUNIFORM2FPROC)wglGetProcAddress("glUniform2f");
       glUseProgram                       = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
       glVertexAttribPointer              = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
+      glUniformMatrix4fv                 = (PFNGLUNIFORMMATRIX4FVPROC)wglGetProcAddress("glUniformMatrix4fv");
 
       glGetIntegerv                      = (PFNGLGETINTEGERVPROC)GetProcAddress(hGLLIB, "glGetIntegerv");
 
@@ -405,7 +460,12 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
       glEnable(GL_DEPTH_TEST);
       glDepthFunc(GL_LEQUAL);
 
-      if (GetBitmap() != 0)
+      if (Load_Bitmap() != 0)
+      {
+            GetLastError();
+      }
+
+      if (LoadIQM() != 0)
       {
             GetLastError();
       }
@@ -482,7 +542,7 @@ int Get4Bytes(FILE * ptr)
 
 }
 
-int GetBitmap(void)
+int Load_Bitmap(void)
 {
       char        * bmBuffer, * pxPtr;
       FILE        * bmFile;
@@ -665,12 +725,15 @@ bool Render(void)
 
       glUseProgram(myProgram);
       glBindBuffer(GL_ARRAY_BUFFER, vPosBufferObject);
-      glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+      glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)108);
      
       glEnableVertexAttribArray(0);
-      glDrawArrays(GL_TRIANGLES, 0, 6);
+      glEnableVertexAttribArray(1);
+      glDrawArrays(GL_TRIANGLES, 0, 9);
 
       glDisableVertexAttribArray(0);
+      glDisableVertexAttribArray(1);
       glBindBuffer(GL_ARRAY_BUFFER, 0);
       glUseProgram(0);
       return TRUE;
@@ -793,6 +856,8 @@ void InitGLSettings(void)
 {
       //char * glVer = (char *)glGetString(GL_VERSION);
       //char * glSLV = (char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
+      float buffer[16] = {0};
+
 
       glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
       glClearDepth(1.0f);
@@ -808,6 +873,27 @@ void InitGLSettings(void)
       glBindBuffer(GL_ARRAY_BUFFER, 0);
 
       myProgram = CreateProgram();
+
+      float depth = pFar - pNear;
+
+
+      PersMatrix[0] = (pNear + pNear)/(w_right - w_left);//(pNear + pNear)/width;                      //(pNear + pNear)/(w_right - w_left); -- These forms are equivalent beecause they are symmetric about the axis.
+      PersMatrix[3] = (w_right + w_left)/(w_right - w_left);      // == 0/# = 0
+
+      PersMatrix[5] = (pNear + pNear)/(h_top - h_bottom);//(pNear + pNear)/height;                       //(pNear + pNear)/(h_top - h_bottom); -- Same as above.
+      PersMatrix[6] = (h_top + h_bottom)/(h_top - h_bottom);      // == 0/# = 0
+
+      PersMatrix[10] = -(pFar + pNear)/depth;                       //-(pFar + pNear)/(pFar - pNear);
+      PersMatrix[11] = (-2.0 * pFar * pNear)/depth;                 //(-2.0 * pFar * pNear)/(pFar - pNear);
+
+      PersMatrix[14] = -1.0f;
+
+
+
+      glUseProgram(myProgram);
+      glUniformMatrix4fv(glGetUniformLocation(myProgram, "perspectiveMatrix"), 1, GL_TRUE, PersMatrix);
+      glGetUniformfv(myProgram, glGetUniformLocation(myProgram, "perspectiveMatrix"), buffer);
+      glUseProgram(0);
 }
 
 void ResizeViewport(int width, int height)
@@ -818,4 +904,59 @@ void ResizeViewport(int width, int height)
       }
       
       glViewport(0, 0, width, height);
+}
+
+int LoadIQM(void)
+{
+      int error;
+      BOOL unmap_result;
+      HANDLE han_Model = CreateFile( "C:\\TestPrograms\\Exported\\decimated_rec_prism.iqm",     //Filename
+                                    GENERIC_READ,                                               //File access
+                                    0,                                                          //Share mode
+                                    NULL,                                                       //Security attributes
+                                    OPEN_EXISTING,                                              //Creation disposition
+                                    FILE_ATTRIBUTE_NORMAL,                                      //File attributes
+                                    NULL);                                                      //Template (ignored for existing file)
+      error = GetLastError();
+
+      HANDLE fmapobj_Model = CreateFileMapping( han_Model,                                      //CreateFile handle
+                                                NULL,                                           //Security attributes
+                                                PAGE_READONLY,                                  //File protection
+                                                0,                                              //Max size (High order)
+                                                0,                                              //Max size (low order)
+                                                NULL);                                          //Name (optional, not needed)
+      error = GetLastError();
+
+      LPVOID ptrdata_Model = MapViewOfFile(     fmapobj_Model,                                  //Handle to file map object
+                                                FILE_MAP_READ,                                  //File access, related to file preotection of CreatFileMapping
+                                                0,                                              //High-order DWORD of beginning file offset
+                                                0,                                              //Low-order DWORD of beginning of file offset
+                                                0);                                             //Number of bytes to map. 0 = all of it
+      error = GetLastError();
+
+      typedef struct{
+            char IQM_magic[16]; // the string "INTERQUAKEMODEL\0", 0 terminated
+            unsigned int IQM_version;   //must be 2
+            unsigned int IQM_filesize;
+            unsigned int IQM_flags;
+            unsigned int IQM_num_text, IQM_ofs_text;
+            unsigned int IQM_num_meshes, IQM_ofs_meshes;
+            unsigned int IQM_num_vertexarrays, IQM_num_vertexes, IQM_ofs_vertexarrays;
+            unsigned int IQM_num_triangles, IQM_ofs_triangles, IQM_ofs_adjacency;
+            unsigned int IQM_num_joints, IQM_ofs_joints;
+            unsigned int IQM_num_poses, IQM_ofs_poses;
+            unsigned int IQM_num_anims, IQM_ofs_anims;
+            unsigned int IQM_num_frames, IQM_num_framechannels, IQM_ofs_frames, IQM_ofs_bounds;
+            unsigned int IQM_num_comment, IQM_ofs_comment;
+            unsigned int IQM_num_extensions, IQM_ofs_extensions;
+      }IQM_Header;
+
+      IQM_Header *ptr_IQMModel;
+      ptr_IQMModel = ptrdata_Model;
+
+      unmap_result = UnmapViewOfFile(ptrdata_Model);  //Deallocate file map view
+      unmap_result = CloseHandle(fmapobj_Model);      //Close file obj handle
+      unmap_result = CloseHandle(han_Model);          //Close file handle
+
+      return 0;
 }
