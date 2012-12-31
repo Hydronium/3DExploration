@@ -1,3 +1,12 @@
+// #define checking
+#define str(s) #s
+#define xstr(s) str(s)
+
+
+#define __STDC_WANT_LIB_EXT1__ 1
+
+#pragma message("__STDC_WANT_LIB_EXT1__ = " xstr(__STDC_WANT_LIB_EXT1__))
+
 #include <windows.h>
 #include <sys/stat.h>
 
@@ -7,6 +16,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 /*----------------------------------------------------*/
 /*Variables*/
 /*----------------------------------------------------*/
@@ -36,9 +46,13 @@ GLuint vPosBufferObject;
 float PersMatrix[16] = { 0 };
 
 float pNear = 1.0f;
-float pFar = 100.0f;
-float w_right = 10.0;  float w_left = -10.0;
-float h_top = 10.0;    float h_bottom = -10.0;
+float pFar = 10.0f;
+float w_right = 5.0;  float w_left = -5.0;
+float h_top = 5.0;    float h_bottom = -5.0;
+
+void *ptr_ModelVertPos;
+GLsizeiptr ModelVertPosSize, ModelNumVertices;
+void *ptr_ModelVertexIndices; //Currently not freed, because object is displayed until program termination.
 
 const float vPos[] =
 {
@@ -248,6 +262,10 @@ int WINAPI WinMain(     HINSTANCE hInstance,
       //UpdateWindow(hWnd);
       glViewport(0, 0, width, height);
       InitGLSettings();
+      if (LoadIQM() != 0)
+      {
+            GetLastError();
+      }
 
 
       while (!done)
@@ -465,11 +483,6 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
             GetLastError();
       }
 
-      if (LoadIQM() != 0)
-      {
-            GetLastError();
-      }
-
       eventResTimer = CreateEvent(  NULL,       //No SECURITY_ATTRIBUTES struct
                                     FALSE,      //Auto-reset
                                     FALSE,      //Initially off
@@ -647,7 +660,7 @@ int Load_Bitmap(void)
       //    Right shift 2: 0000 1000  -> These operations round to nearest
       //    Shift left 2:  0010 0000  -> multiple of 4.
       //    32 bytes to reach 4byte multiple
-      //    So 30 bytes for 10 pixles plus 2 extra bytes of padding, per row.
+      //    So 30 bytes for 10 pixels plus 2 extra bytes of padding, per row.
       pixelBytesPerRow = bmWidthPx * bmBytesPerPixel;
       totalBytesPerRow = ((pixelBytesPerRow + bmBytesPerPixel) >> 2) << 2;
       padCount = totalBytesPerRow - pixelBytesPerRow;
@@ -719,6 +732,28 @@ int Load_Bitmap(void)
       return 0;
 }
 
+//Regular draw
+/*bool Render(void)
+{
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+      glUseProgram(myProgram);
+      glBindBuffer(GL_ARRAY_BUFFER, vPosBufferObject);
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+      //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)108);
+     
+      glEnableVertexAttribArray(0);
+      //glEnableVertexAttribArray(1);
+      glDrawArrays(GL_TRIANGLES, 0, ModelNumVertices);
+
+      glDisableVertexAttribArray(0);
+      //glDisableVertexAttribArray(1);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+      glUseProgram(0);
+      return TRUE;
+}*/
+
+//Draw Elements
 bool Render(void)
 {
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -726,14 +761,14 @@ bool Render(void)
       glUseProgram(myProgram);
       glBindBuffer(GL_ARRAY_BUFFER, vPosBufferObject);
       glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-      glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)108);
+      //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)108);
      
       glEnableVertexAttribArray(0);
-      glEnableVertexAttribArray(1);
-      glDrawArrays(GL_TRIANGLES, 0, 9);
+      //glEnableVertexAttribArray(1);
+      glDrawElements(GL_TRIANGLES, ModelNumVertices, GL_UNSIGNED_INT, ptr_ModelVertexIndices);
 
       glDisableVertexAttribArray(0);
-      glDisableVertexAttribArray(1);
+      //glDisableVertexAttribArray(1);
       glBindBuffer(GL_ARRAY_BUFFER, 0);
       glUseProgram(0);
       return TRUE;
@@ -865,13 +900,13 @@ void InitGLSettings(void)
       glDepthFunc(GL_LEQUAL);
 
       glGenBuffers(1, &vPosBufferObject);
-
+/*
       glBindBuffer(GL_ARRAY_BUFFER, vPosBufferObject);
 
-      glBufferData(GL_ARRAY_BUFFER, sizeof(vPos), vPos, GL_STATIC_DRAW);
+      glBufferData(GL_ARRAY_BUFFER, ModelVertPosSize, ptr_ModelVertPos, GL_STATIC_DRAW);
 
       glBindBuffer(GL_ARRAY_BUFFER, 0);
-
+*/
       myProgram = CreateProgram();
 
       float depth = pFar - pNear;
@@ -910,7 +945,7 @@ int LoadIQM(void)
 {
       int error;
       BOOL unmap_result;
-      HANDLE han_Model = CreateFile( "C:\\TestPrograms\\Exported\\decimated_rec_prism.iqm",     //Filename
+      HANDLE han_Model = CreateFile( "C:\\TestPrograms\\Exported\\something_ridiculous.iqm",     //Filename
                                     GENERIC_READ,                                               //File access
                                     0,                                                          //Share mode
                                     NULL,                                                       //Security attributes
@@ -934,7 +969,8 @@ int LoadIQM(void)
                                                 0);                                             //Number of bytes to map. 0 = all of it
       error = GetLastError();
 
-      typedef struct{
+      typedef struct
+      {
             char IQM_magic[16]; // the string "INTERQUAKEMODEL\0", 0 terminated
             unsigned int IQM_version;   //must be 2
             unsigned int IQM_filesize;
@@ -953,6 +989,57 @@ int LoadIQM(void)
 
       IQM_Header *ptr_IQMModel;
       ptr_IQMModel = ptrdata_Model;
+
+      typedef struct
+      {
+          unsigned int IQM_name;     // unique name for the mesh, if desired
+          unsigned int IQM_material; // set to a name of a non-unique material or texture
+          unsigned int IQM_first_vertex, IQM_num_vertexes;
+          unsigned int IQM_first_triangle, IQM_num_triangles;
+      }IQM_mesh;
+
+      IQM_mesh *ptr_IQMMesh = (void *)((unsigned int)ptrdata_Model + ptr_IQMModel->IQM_ofs_meshes);
+
+      typedef struct
+      {
+          unsigned int type;   // type or custom name
+          unsigned int flags;
+          unsigned int format; // component format
+          unsigned int size;   // number of components
+          unsigned int offset; // offset to array of tightly packed components, with num_vertexes * size total entries
+                                    // offset must be aligned to max(sizeof(format), 4)
+      }IQM_vertexarray;
+
+      IQM_vertexarray *ptr_IQMVertexArray = (void *)(ptr_IQMModel->IQM_ofs_vertexarrays + (unsigned int)ptrdata_Model);
+
+      if (ptr_IQMVertexArray->format == 7)
+      {
+            ModelVertPosSize = ptr_IQMVertexArray->size * ptr_IQMMesh->IQM_num_vertexes * sizeof(float);
+      }
+
+      
+      ptr_ModelVertPos = (void *)((unsigned int)ptrdata_Model + ptr_IQMVertexArray->offset);
+      ModelNumVertices = ptr_IQMMesh->IQM_num_vertexes;
+
+      unsigned int TMP_NumIndices = ptr_IQMMesh->IQM_num_triangles * 3;
+      unsigned int TMP_ptrIndices = ((unsigned int)ptrdata_Model + ptr_IQMModel->IQM_ofs_triangles);
+
+      ptr_ModelVertexIndices = calloc(TMP_NumIndices, sizeof(unsigned int));
+            //somefloats = ptr_ModelVertPos; 
+                  //(void *)((unsigned int)ptrdata_Model + ptr_IQMVertexArray->offset);
+
+      /*memcpy(ptr_ModelVertexIndices, (void *)TMP_ptrIndices, TMP_NumIndices * sizeof(unsigned int));*/
+      memcpy_s(ptr_ModelVertexIndices, TMP_NumIndices * sizeof(unsigned int), (void *)TMP_ptrIndices, TMP_NumIndices * sizeof(unsigned int));
+
+      /*For debugging.*/ unsigned int (*ptr_uint)[36] = (void *)ptr_ModelVertexIndices; /*For debugging.*/
+
+      error = GetLastError();
+
+      glBindBuffer(GL_ARRAY_BUFFER, vPosBufferObject);
+
+      glBufferData(GL_ARRAY_BUFFER,/* sizeof(vPos),vPos*/ ModelVertPosSize, ptr_ModelVertPos, GL_STATIC_DRAW);
+
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
 
       unmap_result = UnmapViewOfFile(ptrdata_Model);  //Deallocate file map view
       unmap_result = CloseHandle(fmapobj_Model);      //Close file obj handle
