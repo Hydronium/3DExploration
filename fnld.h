@@ -38,3 +38,11 @@ PFNGLVERTEXATTRIBPOINTERPROC		glVertexAttribPointer;
 PFNGLVIEWPORTPROC					glViewport;
 PFNGLGETINTEGERVPROC				glGetIntegerv;
 PFNGLUNIFORMMATRIX4FVPROC			glUniformMatrix4fv;
+
+typedef HGLRC WINAPI (*PFNwglCreateContext)(HDC);
+typedef BOOL WINAPI (*PFNwglMakeCurrent)(HDC,HGLRC);
+typedef PROC WINAPI (*PFNwglGetProcAddress)(LPCSTR);
+
+PFNwglCreateContext MYwglCreateContext;
+PFNwglMakeCurrent MYwglMakeCurrent;
+PFNwglGetProcAddress MYwglGetProcAddress;

@@ -358,6 +358,15 @@ LRESULT CALLBACK WndProc(     HWND hWnd,
 
 bool GLSetup(HWND hWnd, LPARAM lParam)
 {
+      HINSTANCE hGLLIB = NULL;
+      hGLLIB = LoadLibrary("opengl32.dll");
+
+      MYwglCreateContext        = (PFNwglCreateContext)GetProcAddress(hGLLIB, "wglCreateContext");
+      MYwglMakeCurrent          = (PFNwglMakeCurrent)GetProcAddress(hGLLIB, "wglMakeCurrent");
+      MYwglGetProcAddress       = (PFNwglGetProcAddress)GetProcAddress(hGLLIB, "wglGetProcAddress");
+
+      //wglCreateContext = *MYwglCreateContext;
+
       //CREATESTRUCT * pCreateStruct = (CREATESTRUCT *)lParam;
       GLuint PixelFormat;
 
@@ -404,22 +413,21 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
             return FALSE;
       }
 
-      if (!(hRC = wglCreateContext(hDC)))
+      if (!(hRC = MYwglCreateContext(hDC)))
       {
             MessageBox(NULL, "Can't create a GL rendering context", "Error", MB_OK | MB_ICONEXCLAMATION);
 
             return FALSE;
       }
 
-      if (!wglMakeCurrent(hDC, hRC))
+      if (!MYwglMakeCurrent(hDC, hRC))
       {
             MessageBox(NULL, "Can't activate the GL rendering context", "Error", MB_OK | MB_ICONEXCLAMATION);
 
             return FALSE;
       }
 
-      HINSTANCE hGLLIB = NULL;
-      hGLLIB = LoadLibrary("opengl32.dll");
+      
 
       if (hGLLIB == NULL)
       {
@@ -427,29 +435,29 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
             return FALSE;
       }
 
-      glActiveTexture                    = (PFNGLACTIVETEXTUREPROC)wglGetProcAddress("glActiveTexture");
-      glAttachShader                     = (PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader");
-      glBindBuffer                       = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
-      glBufferData                       = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
-      glCompileShader                    = (PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader");
-      glCreateProgram                    = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
-      glCreateShader                     = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
-      glDeleteShader                     = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
-      glDetachShader                     = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
-      glDisableVertexAttribArray         = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glDisableVertexAttribArray");
-      glEnableVertexAttribArray          = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
-      glGenBuffers                       = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
-      glGetShaderInfoLog                 = (PFNGLGETSHADERINFOLOGPROC)wglGetProcAddress("glGetShaderInfoLog");
-      glGetShaderiv                      = (PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv");
-      glGetUniformfv                     = (PFNGLGETUNIFORMFVPROC)wglGetProcAddress("glGetUniformfv");
-      glGetUniformLocation               = (PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation");
-      glLinkProgram                      = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
-      glShaderSource                     = (PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource");
-      glUniform1i                        = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
-      glUniform2f                        = (PFNGLUNIFORM2FPROC)wglGetProcAddress("glUniform2f");
-      glUseProgram                       = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
-      glVertexAttribPointer              = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
-      glUniformMatrix4fv                 = (PFNGLUNIFORMMATRIX4FVPROC)wglGetProcAddress("glUniformMatrix4fv");
+      glActiveTexture                    = (PFNGLACTIVETEXTUREPROC)MYwglGetProcAddress("glActiveTexture");
+      glAttachShader                     = (PFNGLATTACHSHADERPROC)MYwglGetProcAddress("glAttachShader");
+      glBindBuffer                       = (PFNGLBINDBUFFERPROC)MYwglGetProcAddress("glBindBuffer");
+      glBufferData                       = (PFNGLBUFFERDATAPROC)MYwglGetProcAddress("glBufferData");
+      glCompileShader                    = (PFNGLCOMPILESHADERPROC)MYwglGetProcAddress("glCompileShader");
+      glCreateProgram                    = (PFNGLCREATEPROGRAMPROC)MYwglGetProcAddress("glCreateProgram");
+      glCreateShader                     = (PFNGLCREATESHADERPROC)MYwglGetProcAddress("glCreateShader");
+      glDeleteShader                     = (PFNGLDELETESHADERPROC)MYwglGetProcAddress("glDeleteShader");
+      glDetachShader                     = (PFNGLDETACHSHADERPROC)MYwglGetProcAddress("glDetachShader");
+      glDisableVertexAttribArray         = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)MYwglGetProcAddress("glDisableVertexAttribArray");
+      glEnableVertexAttribArray          = (PFNGLENABLEVERTEXATTRIBARRAYPROC)MYwglGetProcAddress("glEnableVertexAttribArray");
+      glGenBuffers                       = (PFNGLGENBUFFERSPROC)MYwglGetProcAddress("glGenBuffers");
+      glGetShaderInfoLog                 = (PFNGLGETSHADERINFOLOGPROC)MYwglGetProcAddress("glGetShaderInfoLog");
+      glGetShaderiv                      = (PFNGLGETSHADERIVPROC)MYwglGetProcAddress("glGetShaderiv");
+      glGetUniformfv                     = (PFNGLGETUNIFORMFVPROC)MYwglGetProcAddress("glGetUniformfv");
+      glGetUniformLocation               = (PFNGLGETUNIFORMLOCATIONPROC)MYwglGetProcAddress("glGetUniformLocation");
+      glLinkProgram                      = (PFNGLLINKPROGRAMPROC)MYwglGetProcAddress("glLinkProgram");
+      glShaderSource                     = (PFNGLSHADERSOURCEPROC)MYwglGetProcAddress("glShaderSource");
+      glUniform1i                        = (PFNGLUNIFORM1IPROC)MYwglGetProcAddress("glUniform1i");
+      glUniform2f                        = (PFNGLUNIFORM2FPROC)MYwglGetProcAddress("glUniform2f");
+      glUseProgram                       = (PFNGLUSEPROGRAMPROC)MYwglGetProcAddress("glUseProgram");
+      glVertexAttribPointer              = (PFNGLVERTEXATTRIBPOINTERPROC)MYwglGetProcAddress("glVertexAttribPointer");
+      glUniformMatrix4fv                 = (PFNGLUNIFORMMATRIX4FVPROC)MYwglGetProcAddress("glUniformMatrix4fv");
 
       glGetIntegerv                      = (PFNGLGETINTEGERVPROC)GetProcAddress(hGLLIB, "glGetIntegerv");
 
@@ -945,7 +953,8 @@ int LoadIQM(void)
 {
       int error;
       BOOL unmap_result;
-      HANDLE han_Model = CreateFile( "C:\\TestPrograms\\Exported\\something_ridiculous.iqm",     //Filename
+      //HANDLE han_Model = CreateFile( "C:\\TestPrograms\\Exported\\something_ridiculous.iqm",     //Filename
+      HANDLE han_Model = CreateFile( "C:\\Stuff\\Programming\\C\\3DExploration\\Cube.iqm",
                                     GENERIC_READ,                                               //File access
                                     0,                                                          //Share mode
                                     NULL,                                                       //Security attributes
