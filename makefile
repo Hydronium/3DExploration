@@ -1,4 +1,5 @@
 #20170317 created
+#As of 20170912, this makefile builds the program correctly.
 
 INCLUDE = $(PellesCDir)\Include\Win;$(PellesCDir)\Include
 LIB = $(PellesCDir)\Lib\Win64;$(PellesCDir)\Lib

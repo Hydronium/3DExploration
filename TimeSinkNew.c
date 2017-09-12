@@ -3,9 +3,11 @@
 #define xstr(s) str(s)
 
 
-#define __STDC_WANT_LIB_EXT1__ 1
+#define __STDC_WANT_LIB_EXT1__ 1 //C compliance. To be expanded upon later...
 
 #pragma message("__STDC_WANT_LIB_EXT1__ = " xstr(__STDC_WANT_LIB_EXT1__))
+
+#define __GL_H
 
 #include <windows.h>
 #include <sys/stat.h>
@@ -154,6 +156,7 @@ int WINAPI WinMain(     HINSTANCE hInstance,
       DWORD dwStyle;
       RECT WindowRect;
 
+	DWORD LastErrorCode;
       width = 640;
       height = 480;
 
@@ -183,8 +186,7 @@ int WINAPI WinMain(     HINSTANCE hInstance,
       {
             DISPLAY_DEVICE dispDevice;
             DEVMODE dmScreenSettings;
-            int error;
-
+            
             memset(&dispDevice, 0, sizeof(dispDevice));
             memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
 
@@ -192,7 +194,7 @@ int WINAPI WinMain(     HINSTANCE hInstance,
 
             if (!(EnumDisplayDevices(NULL, 0, &dispDevice, 0)))
             {
-                  error = GetLastError();
+                  LastErrorCode = GetLastError();
                   return 1;
             }
              
@@ -200,7 +202,7 @@ int WINAPI WinMain(     HINSTANCE hInstance,
 
             if (!(EnumDisplaySettings(dispDevice.DeviceName, ENUM_CURRENT_SETTINGS, &dmScreenSettings)))
             {
-                  error = GetLastError();
+                  LastErrorCode = GetLastError();
                   return 1;
             }
 
@@ -240,19 +242,22 @@ int WINAPI WinMain(     HINSTANCE hInstance,
       AdjustWindowRectEx(&WindowRect, dwStyle, FALSE, dwExStyle);
 
       //Creating the window
-      if(!(hWnd = CreateWindowEx(   dwExStyle, //Extended settings
-                                    "TimeSink", //Class title
-                                    "Test", //Window title
-                                    WS_OVERLAPPEDWINDOW, //Regular settings
-                                    0,//CW_USEDEFAULT, 
-                                    0,//CW_USEDEFAULT, 
-                                    WindowRect.right - WindowRect.left,
-                                    WindowRect.bottom - WindowRect.top,
-                                    NULL, 
-                                    NULL, 
-                                    hInstance, 
-                                    NULL)))
+      hWnd = CreateWindowEx(   0,//dwExStyle, //Extended settings
+                              "TimeSink", //Class title
+                              "Test", //Window title
+                              WS_OVERLAPPEDWINDOW, //Regular settings
+                              0,//CW_USEDEFAULT, 
+                              0,//CW_USEDEFAULT, 
+                              WindowRect.right - WindowRect.left,
+                              WindowRect.bottom - WindowRect.top,
+                              NULL, 
+                              NULL, 
+                              hInstance, 
+                              NULL);
+      
+      if(hWnd == NULL)
       {
+		LastErrorCode = GetLastError();
             return 1;
       }
 
@@ -320,8 +325,12 @@ LRESULT CALLBACK WndProc(     HWND hWnd,
                   }
                   break;
             }
+            //CreateWindowEx causes this to fire.
             case WM_CREATE:
             {
+                  //If GLSetup fails, window creation is interrupted but CreateWindowEx WILL NOT NOTICE IT AS AN ERROR.
+                  //In the future, consider changing this to include an option to "return 0;". This will let windows handle window creation, says teh MSDN.
+                  //Another method involving a windows-defined function call was also mentioned...
                   if (!(GLSetup(hWnd, lParam)))
                   {
                         return -1;
@@ -365,7 +374,7 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
       MYwglMakeCurrent          = (PFNwglMakeCurrent)GetProcAddress(hGLLIB, "wglMakeCurrent");
       MYwglGetProcAddress       = (PFNwglGetProcAddress)GetProcAddress(hGLLIB, "wglGetProcAddress");
 
-      //wglCreateContext = *MYwglCreateContext;
+      //wglCreateContext = MYwglCreateContext;
 
       //CREATESTRUCT * pCreateStruct = (CREATESTRUCT *)lParam;
       GLuint PixelFormat;
@@ -435,6 +444,7 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
             return FALSE;
       }
 
+      //All OpenGL functions that are not found in OpenGL 1.x require wglGetProcAddress (access through MYwglGetProcAddress)
       glActiveTexture                    = (PFNGLACTIVETEXTUREPROC)MYwglGetProcAddress("glActiveTexture");
       glAttachShader                     = (PFNGLATTACHSHADERPROC)MYwglGetProcAddress("glAttachShader");
       glBindBuffer                       = (PFNGLBINDBUFFERPROC)MYwglGetProcAddress("glBindBuffer");
@@ -459,11 +469,13 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
       glVertexAttribPointer              = (PFNGLVERTEXATTRIBPOINTERPROC)MYwglGetProcAddress("glVertexAttribPointer");
       glUniformMatrix4fv                 = (PFNGLUNIFORMMATRIX4FVPROC)MYwglGetProcAddress("glUniformMatrix4fv");
 
+      //All OpenGL 1.X functions must use "GetProcAddress" and must refer to the opengl32.dll.
+      //The details elude me, but it seems that wglGetProcAddress simply does not look in the appropriate locations for these functions.
+      //Perhaps because they're directly exported from opengl32.dll. Maybe.
       glGetIntegerv                      = (PFNGLGETINTEGERVPROC)GetProcAddress(hGLLIB, "glGetIntegerv");
-
       glBindTexture                      = (PFNGLBINDTEXTUREPROC)GetProcAddress(hGLLIB, "glBindTexture");
       glClear                            = (PFNGLCLEARPROC)GetProcAddress(hGLLIB, "glClear");
-      glClearColor                       = (PFNGLCLEARCOLORPROC)GetProcAddress(hGLLIB, "glClearColor");
+	glClearColor                       = (PFNGLCLEARCOLORPROC)GetProcAddress(hGLLIB, "glClearColor");
       glClearDepth                       = (PFNGLCLEARDEPTHPROC)GetProcAddress(hGLLIB, "glClearDepth");
       glDepthFunc                        = (PFNGLDEPTHFUNCPROC)GetProcAddress(hGLLIB, "glDepthFunc");
       glDrawArrays                       = (PFNGLDRAWARRAYSPROC)GetProcAddress(hGLLIB, "glDrawArrays");
@@ -473,7 +485,7 @@ bool GLSetup(HWND hWnd, LPARAM lParam)
       glGetError                         = (PFNGLGETERRORPROC)GetProcAddress(hGLLIB, "glGetError");
       glGetString                        = (PFNGLGETSTRINGPROC)GetProcAddress(hGLLIB, "glGetString");
       glTexImage2D                       = (PFNGLTEXIMAGE2DPROC)GetProcAddress(hGLLIB, "glTexImage2D");
-      glTexParameteri                    = (PFNGLTEXPARAMETERIPROC)GetProcAddress(hGLLIB, "glTexParameteri");
+	glTexParameteri                    = (PFNGLTEXPARAMETERIPROC)GetProcAddress(hGLLIB, "glTexParameteri");
       glViewport                         = (PFNGLVIEWPORTPROC)GetProcAddress(hGLLIB, "glViewport");
 
       if(GetLastError())
